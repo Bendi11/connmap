@@ -1,10 +1,18 @@
+#include "ipgeo.h"
 #include <libmnl/libmnl.h>
 #include <linux/inet_diag.h>
 #include <linux/netlink.h>
 #include <linux/netlink_diag.h>
+#include <locale.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <stdio.h>
+#define NANOSVG_IMPLEMENTATION
+#include <nanosvg.h>
+#define NANOSVGRAST_IMPLEMENTATION
+#include <nanosvgrast.h>
+
+#include "term.h"
 
 int mnl_msg_cb(struct nlmsghdr const *msg, void *data);
 void fput_inaddr(FILE *fp, in_addr_t addr) {
@@ -12,7 +20,23 @@ void fput_inaddr(FILE *fp, in_addr_t addr) {
 }
 char const* tcp_state_str(uint8_t state);
 
+
 int main(int argc, char const *argv[]) {
+    setlocale(LC_ALL, "");
+    
+    mapchars_t *map = image_to_chbuf("../assets/mercator-projection.svg", 250);
+    ipgeodb_t *db = ipgeodb_open(
+        "../asset/asn-country-ipv4-num.csv",
+        "../asset/iso3166-1-cc.csv"
+    );
+
+    for(int y = 0; y < map->height; ++y) {
+        for(int x = 0; x < map->width; ++x) {
+            fwrite(map->data + y * map->width * 3 + x * 3, sizeof(uint8_t), 3, stdout);
+        }
+        putchar('\n');
+    }
+
     struct mnl_socket *sock = mnl_socket_open(NETLINK_SOCK_DIAG);
     if(sock == NULL) {
         perror("mnl_socket_open");
