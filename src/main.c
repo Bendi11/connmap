@@ -4,9 +4,11 @@
 #include <linux/netlink.h>
 #include <linux/netlink_diag.h>
 #include <locale.h>
+#include <math.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <stdio.h>
+#include <ncurses.h>
 #define NANOSVG_IMPLEMENTATION
 #include <nanosvg.h>
 #define NANOSVGRAST_IMPLEMENTATION
@@ -20,22 +22,35 @@ void fput_inaddr(FILE *fp, in_addr_t addr) {
 }
 char const* tcp_state_str(uint8_t state);
 
+struct state {
+    mapchars_t *map;
+    ipgeodb_t *db;
+};
 
 int main(int argc, char const *argv[]) {
+    WINDOW *win = initscr();
     setlocale(LC_ALL, "");
     
-    mapchars_t *map = image_to_chbuf("../assets/mercator-projection.svg", 250);
-    ipgeodb_t *db = ipgeodb_open(
+    int termwidth, termheight;
+    getmaxyx(win, termheight, termwidth);
+
+    int min_extent = termwidth < termheight ? termwidth : termheight;
+    printf("Min is %d\n", min_extent);
+    struct state state;
+    state.map = image_to_chbuf("../assets/mercator-projection.svg", min_extent);
+    state.db = ipgeodb_open(
         "../asset/asn-country-ipv4-num.csv",
         "../asset/iso3166-1-cc.csv"
     );
 
-    for(int y = 0; y < map->height; ++y) {
-        for(int x = 0; x < map->width; ++x) {
-            fwrite(map->data + y * map->width * 3 + x * 3, sizeof(uint8_t), 3, stdout);
+    for(int y = 0; y < state.map->height; ++y) {
+        for(int x = 0; x < state.map->width; ++x) {
+            mvaddch(y, x, *(const chtype*)(state.map->data + y * state.map->width * 3 + x * 3));
         }
-        putchar('\n');
+        addch('\n');
     }
+
+    refresh();
 
     struct mnl_socket *sock = mnl_socket_open(NETLINK_SOCK_DIAG);
     if(sock == NULL) {
@@ -65,7 +80,7 @@ int main(int argc, char const *argv[]) {
             msg->nlmsg_seq,
             msg->nlmsg_pid,
             mnl_msg_cb,
-            NULL
+            &state
         );
         if(rc < 0) {
             perror("mnl_cb_run");
@@ -76,15 +91,23 @@ int main(int argc, char const *argv[]) {
 
 
 int mnl_msg_cb(struct nlmsghdr const *msg, void *data) {
+    struct state *state = (struct state*)data;
+
     struct inet_diag_msg const *diag = mnl_nlmsg_get_payload(msg);
     size_t len = mnl_nlmsg_get_payload_len(msg);
     
-    printf("%s: ", tcp_state_str(diag->idiag_state));
-    fput_inaddr(stdout, diag->id.idiag_src[0]);
-    printf(":%d", ntohs(diag->id.idiag_sport));
-    printf(" -> ");
-    fput_inaddr(stdout, diag->id.idiag_dst[0]);
-    printf(":%d\n", ntohs(diag->id.idiag_dport));
+    if(diag->idiag_state == TCP_ESTABLISHED) {
+        latlong_t loc;
+        uint32_t dest = ntohl(diag->id.idiag_dst[0]);
+        if(ipgeodb_lookup(state->db, dest, &loc)) {
+            float radius = (float)state->map->width / (2 * M_PI);
+            int32_t x = (radius * (loc.lon * (M_PI / 180.f))) + ((float)state->map->width / 2.f);
+            int32_t y = radius * logf(tanf(M_PI_4 + (loc.lat * (M_PI / 180.f)) / 2.f));
+            
+            curs_set(0);
+            mvaddch(y, x, 'x');
+        }
+    }
     return 0;
 }
 

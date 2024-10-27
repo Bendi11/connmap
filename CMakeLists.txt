@@ -21,4 +21,4 @@ file(
 add_executable(${CMAKE_PROJECT_NAME} ${SRC})
 
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src" "${CMAKE_CURRENT_SOURCE_DIR}/lib/nanosvg/src")
-target_link_libraries(${CMAKE_PROJECT_NAME} PUBLIC ${MNL} m)
+target_link_libraries(${CMAKE_PROJECT_NAME} PUBLIC ${MNL} m ncurses)
