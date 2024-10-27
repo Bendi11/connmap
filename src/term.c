@@ -15,16 +15,10 @@ struct rgba {
 typedef struct rgba rgba_t;
 
 bool is_filled(rgba_t *px) {
-    return px->a < 200;
+    return px->a > 200;
 }
 
 static char buf[5] = {0};
-
-static void code_to_utf8(uint8_t *const buffer, const unsigned int code) {
-    buffer[0] = 0xE0 | (code >> 12);           /* 1110xxxx */
-    buffer[1] = 0x80 | ((code >> 6) & 0x3F);   /* 10xxxxxx */
-    buffer[2] = 0x80 | (code & 0x3F);          /* 10xxxxxx */
-}
 
 uint32_t px8braille(rgba_t *pixels, size_t width) {
     uint8_t mask = 
@@ -66,8 +60,8 @@ mapchars_t* image_to_chbuf(char const *path, int max_dim) {
             }
 
             uint32_t code = px8braille(pixel, width);
-            uint8_t (*utf8)[3] = map->data + y * map->width * 3 + x * 3;
-            code_to_utf8((uint8_t*)utf8, code);
+            wchar_t *ch = map->data + y * map->width * 3 + x * 3;
+            *ch = code;
         }
     }
 

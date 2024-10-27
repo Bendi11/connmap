@@ -61,7 +61,7 @@ ipgeodb_t* ipgeodb_open(char const *ipdb, char const *ccdb) {
 
     fclose(ccdb_fp);
     
-    db->range = malloc(sizeof(iprange_t) * 133500);
+    db->range = malloc(sizeof(iprange_t) * 350000);
 
     FILE *ipdb_fp = fopen(ipdb, "r");
     for(;;) {

@@ -7,7 +7,7 @@
 struct mapchars {
     int width;
     int height;
-    uint8_t data[][3];
+    wchar_t data[];
 };
 
 typedef struct mapchars mapchars_t;
