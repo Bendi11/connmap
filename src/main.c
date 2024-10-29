@@ -44,14 +44,14 @@ int main(int argc, char const *argv[]) {
     int termwidth, termheight;
     getmaxyx(win, termheight, termwidth);
 
-    int min_extent = termwidth < termheight ? termwidth : termheight;
-    min_extent = 350;
+    //int min_extent = termwidth < termheight ? termwidth : termheight;
     struct state state;
-    state.map = image_to_chbuf("../assets/mercator-projection.svg", min_extent);
+    state.map = image_to_chbuf("../assets/mercator-projection.svg", termheight * 4 * 4 / 3); 
     state.db = ipgeodb_open(
         "../asset/asn-country-ipv4-num.csv",
         "../asset/iso3166-1-cc.csv"
     );
+
 
     for(int y = 0; y < state.map->height; ++y) {
         for(int x = 0; x < state.map->width; ++x) {
